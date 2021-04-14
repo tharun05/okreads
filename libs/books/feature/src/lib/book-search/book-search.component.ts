@@ -7,9 +7,10 @@ import {
   ReadingListBook,
   searchBooks
 } from '@tmo/books/data-access';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { FormBuilder } from '@angular/forms';
 import { Book } from '@tmo/shared/models';
-
 @Component({
   selector: 'tmo-book-search',
   templateUrl: './book-search.component.html',
@@ -17,15 +18,16 @@ import { Book } from '@tmo/shared/models';
 })
 export class BookSearchComponent implements OnInit {
   books: ReadingListBook[];
-
   searchForm = this.fb.group({
     term: ''
   });
-
+  debouncedInputValue = this.searchForm.value.term;
+  private searchDecouncer$: Subject<string> = new Subject();
   constructor(
     private readonly store: Store,
-    private readonly fb: FormBuilder
-  ) {}
+    private readonly fb: FormBuilder,
+  ) {
+  }
 
   get searchTerm(): string {
     return this.searchForm.value.term;
@@ -35,6 +37,7 @@ export class BookSearchComponent implements OnInit {
     this.store.select(getAllBooks).subscribe(books => {
       this.books = books;
     });
+    this.setupSearchDebouncer();
   }
 
   formatDate(date: void | string) {
@@ -53,8 +56,20 @@ export class BookSearchComponent implements OnInit {
   }
 
   searchBooks() {
-    if (this.searchForm.value.term) {
-      this.store.dispatch(searchBooks({ term: this.searchTerm }));
+    this.searchDecouncer$.next(this.searchForm.value.term);
+  }
+  private setupSearchDebouncer(): void {
+    this.searchDecouncer$.pipe(
+      debounceTime(500),
+      distinctUntilChanged(),
+    ).subscribe((term: string) => {
+      this.debouncedInputValue = term;
+      this.search(term);
+    });
+  }
+  search(term) {
+    if (term) {
+      this.store.dispatch(searchBooks({ term }));
     } else {
       this.store.dispatch(clearSearch());
     }
