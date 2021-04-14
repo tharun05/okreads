@@ -34,8 +34,6 @@ describe('Books Reducer', () => {
       const result: State = reducer({ ...initialState, ...books }, clearAction);
       expect(result.ids.length).toBe(0);
     });
-
-
   });
 
   describe('unknown action', () => {
