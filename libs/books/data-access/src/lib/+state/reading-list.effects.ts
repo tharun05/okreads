@@ -8,6 +8,9 @@ import * as ReadingListActions from './reading-list.actions';
 
 @Injectable()
 export class ReadingListEffects implements OnInitEffects {
+
+  constructor(private actions$: Actions, private http: HttpClient) {}
+
   loadReadingList$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ReadingListActions.init),
@@ -54,9 +57,22 @@ export class ReadingListEffects implements OnInitEffects {
     )
   );
 
+  updateFinishBook$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ReadingListActions.finishReadingBook),
+      concatMap(({ book }) =>
+        this.http.put(`/api/reading-list/${book.bookId}/finished`, book).pipe(
+          map(() => ReadingListActions.confirmedFinishReadingBook({ book })),
+          catchError(() =>
+            of(ReadingListActions.failedFinishReadingBook({ book }))
+          )
+        )
+      )
+    )
+  );
+
   ngrxOnInitEffects() {
     return ReadingListActions.init();
   }
 
-  constructor(private actions$: Actions, private http: HttpClient) {}
 }
