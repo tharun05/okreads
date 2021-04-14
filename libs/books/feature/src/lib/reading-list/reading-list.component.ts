@@ -3,12 +3,7 @@ import { Store } from '@ngrx/store';
 import {
   getReadingList,
   removeFromReadingList,
-  addToReadingList } from '@tmo/books/data-access';
-import {
-  MatSnackBar,
-  MatSnackBarHorizontalPosition,
-  MatSnackBarVerticalPosition,
-} from '@angular/material/snack-bar';
+  finishReadingBook } from '@tmo/books/data-access';
 
 @Component({
   selector: 'tmo-reading-list',
@@ -17,24 +12,16 @@ import {
 })
 export class ReadingListComponent implements OnInit {
   readingList$ = this.store.select(getReadingList);
-  horizontalPosition: MatSnackBarHorizontalPosition = 'center';
-  verticalPosition: MatSnackBarVerticalPosition = 'bottom';
   constructor(
-    private readonly store: Store,
-    private _snackBar: MatSnackBar) {
+    private readonly store: Store) {
   }
   ngOnInit() {
   }
 
   removeFromReadingList(item) {
     this.store.dispatch(removeFromReadingList({ item }));
-    const confirmSnackbar = this._snackBar.open('Removed from reading list', 'Undo' , {
-      duration: 3000,
-      horizontalPosition: this.horizontalPosition,
-      verticalPosition: this.verticalPosition,
-    });
-    confirmSnackbar.onAction().subscribe(() => {
-      this.store.dispatch(addToReadingList({book: item}));
-    });
+  }
+  finishReadingBook(book) {
+    this.store.dispatch(finishReadingBook({ book: {...book, finished: true, finishedDate: new Date().toISOString()} }));
   }
 }
