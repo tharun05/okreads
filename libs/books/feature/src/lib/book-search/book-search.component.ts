@@ -7,10 +7,16 @@ import {
   ReadingListBook,
   searchBooks
 } from '@tmo/books/data-access';
-import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { FormBuilder } from '@angular/forms';
 import { Book } from '@tmo/shared/models';
+import { removeFromReadingList } from '../../../../data-access/src/lib/+state/reading-list.actions';
+
+import {
+  MatSnackBar,
+  MatSnackBarHorizontalPosition,
+  MatSnackBarVerticalPosition,
+} from '@angular/material/snack-bar';
+
 @Component({
   selector: 'tmo-book-search',
   templateUrl: './book-search.component.html',
@@ -18,16 +24,17 @@ import { Book } from '@tmo/shared/models';
 })
 export class BookSearchComponent implements OnInit {
   books: ReadingListBook[];
+  horizontalPosition: MatSnackBarHorizontalPosition = 'center';
+  verticalPosition: MatSnackBarVerticalPosition = 'bottom';
   searchForm = this.fb.group({
     term: ''
   });
-  debouncedInputValue = this.searchForm.value.term;
-  private searchDecouncer$: Subject<string> = new Subject();
+
   constructor(
     private readonly store: Store,
     private readonly fb: FormBuilder,
-  ) {
-  }
+    private _snackBar: MatSnackBar
+  ) {}
 
   get searchTerm(): string {
     return this.searchForm.value.term;
@@ -37,7 +44,6 @@ export class BookSearchComponent implements OnInit {
     this.store.select(getAllBooks).subscribe(books => {
       this.books = books;
     });
-    this.setupSearchDebouncer();
   }
 
   formatDate(date: void | string) {
@@ -48,6 +54,15 @@ export class BookSearchComponent implements OnInit {
 
   addBookToReadingList(book: Book) {
     this.store.dispatch(addToReadingList({ book }));
+    const confirmSnackbar = this._snackBar.open('Added to reading list', 'Undo' , {
+      duration: 3000,
+      horizontalPosition: this.horizontalPosition,
+      verticalPosition: this.verticalPosition,
+    });
+    confirmSnackbar.onAction().subscribe(() => {
+      const item: any = {bookId: book.id};
+      this.store.dispatch(removeFromReadingList({item}));
+    });
   }
 
   searchExample() {
@@ -56,20 +71,8 @@ export class BookSearchComponent implements OnInit {
   }
 
   searchBooks() {
-    this.searchDecouncer$.next(this.searchForm.value.term);
-  }
-  private setupSearchDebouncer(): void {
-    this.searchDecouncer$.pipe(
-      debounceTime(500),
-      distinctUntilChanged(),
-    ).subscribe((term: string) => {
-      this.debouncedInputValue = term;
-      this.search(term);
-    });
-  }
-  search(term) {
-    if (term) {
-      this.store.dispatch(searchBooks({ term }));
+    if (this.searchForm.value.term) {
+      this.store.dispatch(searchBooks({ term: this.searchTerm }));
     } else {
       this.store.dispatch(clearSearch());
     }
